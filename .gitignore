@@ -1,0 +1,9 @@
+# Drawio backup and save files.
+*.bkp
+*.dtmp
+
+# VS Code folder
+.vscode
+
+# Compiled Files
+*.o
