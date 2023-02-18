@@ -7,3 +7,6 @@
 
 # Compiled Files
 *.o
+
+# Any benchmarking files
+callgrind*

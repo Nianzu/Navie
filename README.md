@@ -57,12 +57,40 @@ gcc -g main.c -o main.o
 
 Execution time for "depth_processing\tsukuba\scene1.row3.col1.ppm" and "depth_processing\tsukuba\scene1.row3.col2.ppm"
 
-### 2/16/2022
+### 2/16/2022 Simple block match
+
 ```
 287/288 - 100%
 block_match() took 90.131191 seconds to execute
 ```
 ![](depth_processing/benchmark_outputs/processed1.png)
+
+
+### 2/17/2022 Full-color block match
+
+```
+287/288 - 100%
+block_match() took 87.297683 seconds to execute
+```
+![](depth_processing/benchmark_outputs/processed2.png)
+
+### 2/17/2022 Fixed block-matching length issue
+
+```
+287/288 - 100%
+block_match() took 21.699990 seconds to execute
+```
+![](depth_processing/benchmark_outputs/processed3.png)
+
+### 2/17/2022 Sup-pixel disparity
+
+```
+287/288 - 100%
+block_match() took 21.609720 seconds to execute
+```
+![](depth_processing/benchmark_outputs/processed4.png)
+
+
 
 ## Sources
 https://medium.com/analytics-vidhya/distance-estimation-cf2f2fd709d8
@@ -75,6 +103,7 @@ http://sintel.is.tue.mpg.de/depth
 https://www.cs.cmu.edu/~16385/s17/Slides/13.2_Stereo_Matching.pdf
 http://mccormickml.com/2014/01/10/stereo-vision-tutorial-part-i/
 https://developer.nvidia.com/how-to-cuda-c-cpp
+https://dsp.stackexchange.com/questions/75899/appropriate-gaussian-filter-parameters-when-resizing-image
 
 ## Contributions
 
