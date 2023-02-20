@@ -90,6 +90,14 @@ block_match() took 21.609720 seconds to execute
 ```
 ![](depth_processing/benchmark_outputs/processed4.png)
 
+### 2/17/2022 Search-box optimization + better data structure for depth map
+
+```
+287/288 - 100%
+block_match() took 3.112148 seconds to execute
+```
+![](depth_processing/benchmark_outputs/processed4.png)
+
 
 
 ## Sources
@@ -104,6 +112,9 @@ https://www.cs.cmu.edu/~16385/s17/Slides/13.2_Stereo_Matching.pdf
 http://mccormickml.com/2014/01/10/stereo-vision-tutorial-part-i/
 https://developer.nvidia.com/how-to-cuda-c-cpp
 https://dsp.stackexchange.com/questions/75899/appropriate-gaussian-filter-parameters-when-resizing-image
+https://www.ri.cmu.edu/pub_files/pub1/dellaert_frank_1999_2/dellaert_frank_1999_2.pdf
+https://fjp.at/posts/localization/mcl/
+https://ros-developer.com/2019/04/10/parcticle-filter-explained-with-python-code-from-scratch/
 
 ## Contributions
 
