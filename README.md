@@ -9,12 +9,12 @@ A little robot that maps its space autonomously, navigating entirely on its own.
 * Extremely low upfront cost (<$100)
 * Stereo camera for navigation
 * Use brushless motors as drive system
+    * FOC on brushless motors
+    * Custom motor driver circuit
 * Onboard navigation processing
 * Onboard vision processing
 * Really small (Fit in the palm of the hand)
 * Integrated rechargeable battery
-* FOC on brushless motors
-* Custom motor driver circuit
 * WIFI connectivity
 
 ![](ProcessDiagram.svg)
@@ -39,8 +39,15 @@ git checkout 3.4
 sudo cmake -DOPENCV_EXTRA_MODULES_PATH=/mnt/c/Users/Zico/Desktop/opencv_contrib/modules -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D BUILD_EXAMPLES=ON -D WITH_QT=ON -D WITH_OPENGL=ON ..
 
 ### Compile
+
+#### Depth processing
 ```
 gcc -g main.c -o main.o
+```
+
+#### Localization
+```
+gcc main.c -O3 -o main.o `sdl2-config --cflags --libs` -lm
 ```
 
 ## To-Do
@@ -51,11 +58,13 @@ gcc -g main.c -o main.o
 * Rectify images (not using Middlebury dataset)
 
 ### Misc
-* Consider installing a laser pointer to aid in depth perception of featureless walls.
+* Consider installing a laser pointer to aid in depth perception of featureless walls. (structured light)
 
-## Benchmarks
+## Benchmarks - Depth processing
 
-Execution time for "depth_processing\tsukuba\scene1.row3.col1.ppm" and "depth_processing\tsukuba\scene1.row3.col2.ppm"
+Execution time for `depth_processing\tsukuba\scene1.row3.col1.ppm` and `depth_processing\tsukuba\scene1.row3.col2.ppm`. All performance is single threaded to make comparisons to future hardware more apt.
+
+![](images/scene1.row3.col1.png) ![](images/scene1.row3.col2.png)
 
 ### 2/16/2022 Simple block match
 
@@ -96,25 +105,56 @@ block_match() took 21.609720 seconds to execute
 287/288 - 100%
 block_match() took 3.112148 seconds to execute
 ```
-![](depth_processing/benchmark_outputs/processed4.png)
+![](depth_processing/benchmark_outputs/processed5.png)
 
+block_match() took 0.682072 seconds to execute
 
+### 2/20/2022 Added -O3 compiler flag and removed unnecessary prints
+
+```
+block_match() took 0.682072 seconds to execute
+```
+![](depth_processing/benchmark_outputs/processed6.png)
+## Benchmarks - 
 
 ## Sources
-https://medium.com/analytics-vidhya/distance-estimation-cf2f2fd709d8
-https://vision.middlebury.edu/stereo/data/
-https://towardsdatascience.com/depth-estimation-1-basics-and-intuition-86f2c9538cd1
-https://ww2.mathworks.cn/help/visionhdl/ug/stereoscopic-disparity.html
-https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=32aedb3d4e52b879de9a7f28ee0ecee997003271
-https://docs.opencv.org/3.4/d3/d14/tutorial_ximgproc_disparity_filtering.html
-http://sintel.is.tue.mpg.de/depth
-https://www.cs.cmu.edu/~16385/s17/Slides/13.2_Stereo_Matching.pdf
-http://mccormickml.com/2014/01/10/stereo-vision-tutorial-part-i/
-https://developer.nvidia.com/how-to-cuda-c-cpp
-https://dsp.stackexchange.com/questions/75899/appropriate-gaussian-filter-parameters-when-resizing-image
-https://www.ri.cmu.edu/pub_files/pub1/dellaert_frank_1999_2/dellaert_frank_1999_2.pdf
-https://fjp.at/posts/localization/mcl/
-https://ros-developer.com/2019/04/10/parcticle-filter-explained-with-python-code-from-scratch/
+
+### Depth processing
+Background + source: https://medium.com/analytics-vidhya/distance-estimation-cf2f2fd709d8
+
+Dataset: https://vision.middlebury.edu/stereo/data/
+
+Background: https://towardsdatascience.com/depth-estimation-1-basics-and-intuition-86f2c9538cd1
+
+Background (Research paper): https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=32aedb3d4e52b879de9a7f28ee0ecee997003271
+
+Background: https://ww2.mathworks.cn/help/visionhdl/ug/stereoscopic-disparity.html
+
+TODO + Source: https://docs.opencv.org/3.4/d3/d14/tutorial_ximgproc_disparity_filtering.html
+
+Dataset: http://sintel.is.tue.mpg.de/depth
+
+Background: https://www.cs.cmu.edu/~16385/s17/Slides/13.2_Stereo_Matching.pdf
+
+Background: http://mccormickml.com/2014/01/10/stereo-vision-tutorial-part-i/
+
+TODO: https://developer.nvidia.com/how-to-cuda-c-cpp
+
+Background: https://dsp.stackexchange.com/questions/75899/appropriate-gaussian-filter-parameters-when-resizing-image
+
+### Localization
+
+Background (Research paper): https://www.ri.cmu.edu/pub_files/pub1/dellaert_frank_1999_2/dellaert_frank_1999_2.pdf
+
+Background + Source: https://fjp.at/posts/localization/mcl/
+
+Background + Source: https://ros-developer.com/2019/04/10/parcticle-filter-explained-with-python-code-from-scratch/
+
+Background (REALLY GOOD): https://www.usna.edu/Users/cs/taylor/courses/si475/notes/slam.pdf
+
+Example: https://www.youtube.com/watch?v=m3L8OfbTXH0
+
+Background (REALLY GOOD):https://www.youtube.com/watch?v=3Yl2aq28LFQ
 
 ## Contributions
 

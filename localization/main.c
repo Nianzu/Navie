@@ -521,13 +521,13 @@ int main(int argc, char *argv[])
         }
 
         // Draw path
-        current_connection = &path;
-        SDL_SetRenderDrawColor(rend, 255, 255, 255, 255);
-        do
-        {
-            SDL_RenderDrawLine(rend, current_connection->x_1, current_connection->y_1, current_connection->x_2, current_connection->y_2);
-            current_connection = current_connection->next;
-        } while (current_connection != NULL);
+        // current_connection = &path;
+        // SDL_SetRenderDrawColor(rend, 255, 255, 255, 255);
+        // do
+        // {
+        //     SDL_RenderDrawLine(rend, current_connection->x_1, current_connection->y_1, current_connection->x_2, current_connection->y_2);
+        //     current_connection = current_connection->next;
+        // } while (current_connection != NULL);
 
         // Draw robot
         SDL_SetRenderDrawColor(rend, 255, 255, 255, 255);

@@ -1,41 +1,51 @@
 // Nico Zucca, 12/2022
 
+// Compile cmd:
+// gcc -g main.c -o main.o
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
 #include <time.h>
 #include <string.h>
 
-#define KERNEL_EDGE_SIZE 5      // How many pixels above/below/left/right of given pixel to SAD for disparity metric. Default 5
-#define BLOCK_SIZE 20           // How many pixels right of given to check for disparity metric. Default 50
-#define RGB_COMPONENT_COLOR 255 // Used for exporting the ppm file
+// How many pixels above/below/left/right of given pixel to SAD for disparity
+// metric. Default 5
+#define KERNEL_EDGE_SIZE 5
+// How many pixels left of given to check for disparity metric. Default 50
+#define BLOCK_SIZE 20
+// Used for exporting the ppm file
+#define RGB_COMPONENT_COLOR 255
 
-// Compile cmd:
-// gcc -g main.c -o main.o
-
-struct PPMPixel
+// An RGB pixel for storing image values
+struct ppm_pixel
 {
     unsigned char red, green, blue;
 };
 
+// An HSV pixel for easier color calculations
 struct hsv_pixel
 {
     double hue, saturation, value;
 };
 
-struct PPMImage
+// Struct used to read and write ppm images from filesystem
+struct ppm_image
 {
     int x, y;
-    struct PPMPixel *data;
+    struct ppm_pixel *data;
 };
 
+// Array of pixel values, used for faster processing
 struct ppm_array
 {
     int height;
     int width;
-    struct PPMPixel ***arr;
+    struct ppm_pixel ***arr;
 };
 
+// Special disparity map structure, used for even faster processing of
+// disparity maps.
 struct disparity_map
 {
     int height;
@@ -43,6 +53,8 @@ struct disparity_map
     double **arr;
 };
 
+// Scale the input value between given output values, clamping if over/under
+// max input.
 double clamp_and_scale(double in_bottom, double in_top, double out_top, double input)
 {
     double out_bottom = 0;
@@ -66,17 +78,19 @@ double clamp_and_scale(double in_bottom, double in_top, double out_top, double i
     return output;
 }
 
-// https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
-struct PPMPixel hsv_to_rgb(struct hsv_pixel in)
+// Convert an HSV pixel value to RGB
+// Source: https://stackoverflow.com/questions/3018313/algorithm-to-convert-rgb-to-hsv-and-hsv-to-rgb-in-range-0-255-for-both
+struct ppm_pixel hsv_to_rgb(struct hsv_pixel in)
 {
     double hh, p, q, t, ff, v;
     long i;
-    struct PPMPixel out;
+    struct ppm_pixel out;
 
     v = clamp_and_scale(0, 1, 255, in.value);
 
+    // If saturation is zero, RGB is just value
     if (in.saturation <= 0.0)
-    { // < is bogus, just shuts up warnings
+    {
         out.red = v;
         out.green = v;
         out.blue = v;
@@ -92,6 +106,7 @@ struct PPMPixel hsv_to_rgb(struct hsv_pixel in)
     q = clamp_and_scale(0, 1, 255, in.value * (1.0 - (in.saturation * ff)));
     t = clamp_and_scale(0, 1, 255, in.value * (1.0 - (in.saturation * (1.0 - ff))));
 
+    // Many cases for proper conversion
     switch (i)
     {
     case 0:
@@ -127,40 +142,36 @@ struct PPMPixel hsv_to_rgb(struct hsv_pixel in)
         out.blue = q;
         break;
     }
-
-    // printf("HSV:%3f,%3f,%3f RGB:%d,%d,%d\n",in.hue,in.saturation,in.value,out.red,out.blue,out.green);
     return out;
 }
 
-// Allocates space for the ppm_array, assumes that the height and width members have been set and are correct.
+// Allocates space for the ppm_array, assumes that the height and width members 
+// have been set and are correct.
 void ppm_array_allocate(struct ppm_array *obj)
 {
-    (*obj).arr = (struct PPMPixel ***)malloc(sizeof(struct PPMPixel **) * (*obj).width);
+    (*obj).arr = (struct ppm_pixel ***)malloc(sizeof(struct ppm_pixel **) * (*obj).width);
     for (int x = 0; x < (*obj).width; x++)
     {
-        (*obj).arr[x] = (struct PPMPixel **)malloc(sizeof(struct PPMPixel *) * (*obj).height);
+        (*obj).arr[x] = (struct ppm_pixel **)malloc(sizeof(struct ppm_pixel *) * (*obj).height);
         for (int y = 0; y < (*obj).height; y++)
         {
-            (*obj).arr[x][y] = (struct PPMPixel *)malloc(sizeof(struct PPMPixel));
+            (*obj).arr[x][y] = (struct ppm_pixel *)malloc(sizeof(struct ppm_pixel));
         }
     }
 }
 
-// Allocates space for the disparity map, assumes that the height and width members have been set and are correct.
+// Allocates space for the disparity map, assumes that the height and width 
+// members have been set and are correct.
 void allocate_disparity_map(struct disparity_map *obj)
 {
     (*obj).arr = (double **)malloc(sizeof(double *) * (*obj).width);
     for (int x = 0; x < (*obj).width; x++)
     {
         (*obj).arr[x] = (double *)malloc(sizeof(double) * (*obj).height);
-        // for (int y = 0; y < (*obj).height; y++)
-        // {
-        //     (*obj).arr[x][y] = (struct PPMPixel *)malloc(sizeof(struct PPMPixel));
-        // }
     }
 }
 
-// Frees space from the ppm_array.
+// Frees the ppm_array object.
 void free_ppm_array(struct ppm_array *obj)
 {
     for (int x = 0; x < (*obj).width; x++)
@@ -174,21 +185,19 @@ void free_ppm_array(struct ppm_array *obj)
     free((*obj).arr);
 }
 
+// Frees the disparity_map object.
 void free_disparity_map(struct disparity_map *obj)
 {
     for (int x = 0; x < (*obj).width; x++)
     {
-        // for (int y = 0; y < (*obj).height; y++)
-        // {
-        //     free((*obj).arr[x][y]);
-        // }
         free((*obj).arr[x]);
     }
     free((*obj).arr);
 }
 
-// Converts the loaded image buffer to an array for easier use.
-void img_to_arr(struct PPMImage *img, struct ppm_array *obj)
+// Converts the loaded image buffer to an array for easier use. Assumes that 
+// the ppm_array hasn't been malloced yet.
+void img_to_arr(struct ppm_image *img, struct ppm_array *obj)
 {
     int i;
     int x;
@@ -212,8 +221,9 @@ void img_to_arr(struct PPMImage *img, struct ppm_array *obj)
     }
 }
 
-// Converts the array back into an image, for viewing.
-void arr_to_img(struct ppm_array *obj, struct PPMImage *img)
+// Converts the array back into an image. Assumes the image HAS been malloced.
+// TODO no protection for writing a bigger file than is malloced.
+void arr_to_img(struct ppm_array *obj, struct ppm_image *img)
 {
     int i;
     int x;
@@ -235,7 +245,8 @@ void arr_to_img(struct ppm_array *obj, struct PPMImage *img)
     }
 }
 
-int get_max_disparity(struct disparity_map *obj)
+// Returns the maximum disparity value from a disparity map.
+double get_max_disparity(struct disparity_map *obj)
 {
     int max = 0;
     for (int j = 0; j < obj->height; j++)
@@ -251,9 +262,10 @@ int get_max_disparity(struct disparity_map *obj)
     return max;
 }
 
-// Converts the array back into an image, for viewing.
-// TODO no protection for writing a bigger file than is malloced
-void disparity_map_to_img(struct disparity_map *obj, struct PPMImage *img)
+// Converts the disparity map back into an image, for viewing. Assumes that the 
+// image HAS been malloced.
+// TODO no protection for writing a bigger file than is malloced.
+void disparity_map_to_img(struct disparity_map *obj, struct ppm_image *img)
 {
     int i;
     int x;
@@ -262,7 +274,6 @@ void disparity_map_to_img(struct disparity_map *obj, struct PPMImage *img)
     img->x = obj->width;
     img->y = obj->height;
     int max_disparity = get_max_disparity(obj);
-    // printf("x,y %d,%d\n",img->x,img->y);
     for (i = 0; i < img->x * img->y; i++)
     {
         int newval = clamp_and_scale(0, max_disparity, 255, obj->arr[x][y]);
@@ -279,15 +290,15 @@ void disparity_map_to_img(struct disparity_map *obj, struct PPMImage *img)
     }
 }
 
-// Reads a PPM file into a buffer.
+// Reads a PPM file into an image object.
 // Source: https://stackoverflow.com/questions/2693631/read-ppm-file-and-store-it-in-an-array-coded-with-c
-// void readPPM(const char *filename, ppm_array *obj)
-static struct PPMImage *readPPM(const char *filename)
+static struct ppm_image *readPPM(const char *filename)
 {
     char buff[16];
-    struct PPMImage *img;
+    struct ppm_image *img;
     FILE *fp;
     int c, rgb_comp_color;
+    
     // open PPM file for reading
     fp = fopen(filename, "rb");
     if (!fp)
@@ -311,7 +322,7 @@ static struct PPMImage *readPPM(const char *filename)
     }
 
     // alloc memory form image
-    img = (struct PPMImage *)malloc(sizeof(struct PPMImage));
+    img = (struct ppm_image *)malloc(sizeof(struct ppm_image));
     if (!img)
     {
         fprintf(stderr, "Unable to allocate memory\n");
@@ -327,8 +338,8 @@ static struct PPMImage *readPPM(const char *filename)
         c = getc(fp);
     }
 
-    ungetc(c, fp);
     // read image size information
+    ungetc(c, fp);
     if (fscanf(fp, "%d %d", &img->x, &img->y) != 2)
     {
         fprintf(stderr, "Invalid image size (error loading '%s')\n", filename);
@@ -352,7 +363,7 @@ static struct PPMImage *readPPM(const char *filename)
     while (fgetc(fp) != '\n')
         ;
     // memory allocation for pixel data
-    img->data = (struct PPMPixel *)malloc(img->x * img->y * sizeof(struct PPMPixel));
+    img->data = (struct ppm_pixel *)malloc(img->x * img->y * sizeof(struct ppm_pixel));
 
     if (!img)
     {
@@ -372,7 +383,7 @@ static struct PPMImage *readPPM(const char *filename)
 }
 
 // Prints the image to the cmd line, 1 pixel at a time. For debugging.
-void print_img(struct PPMImage *img)
+void print_img(struct ppm_image *img)
 {
     printf("x,y : %d,%d\n", img->x, img->y);
     int i;
@@ -392,12 +403,14 @@ void print_arr(struct ppm_array obj)
     {
         for (int x = 0; x < obj.width; x++)
         {
-            // printf("x: %d, y: %d,  r: %d,  g: %d,  b: %d\n", x, y, obj.arr[x][y]->red, obj.arr[x][y]->green, obj.arr[x][y]->blue);
+            printf("x: %d, y: %d,  r: %d,  g: %d,  b: %d\n", x, y, obj.arr[x][y]->red, obj.arr[x][y]->green, obj.arr[x][y]->blue);
         }
     }
 }
 
-void writePPM(const char *filename, struct PPMImage *img)
+// Writes the ppm_image object to the filesystem as a .ppm image.
+// Source: https://stackoverflow.com/questions/2693631/read-ppm-file-and-store-it-in-an-array-coded-with-c
+void writePPM(const char *filename, struct ppm_image *img)
 {
     FILE *fp;
     // open file for output
@@ -423,9 +436,9 @@ void writePPM(const char *filename, struct PPMImage *img)
     fclose(fp);
 }
 
+// Convert each pixel value in the image to grey.
 void to_greyscale(struct ppm_array *obj)
 {
-    // Needs to be in this order for the image to be output correctly
     for (int x = 0; x < (*obj).width; x++)
     {
         for (int y = 0; y < (*obj).height; y++)
@@ -442,6 +455,7 @@ void to_greyscale(struct ppm_array *obj)
     }
 }
 
+// Return the absolute value of the input
 int abs(int in)
 {
     if (in < 0)
@@ -451,14 +465,14 @@ int abs(int in)
     return in;
 }
 
-// https://www.geeksforgeeks.org/inline-function-in-c/
+// Get a sum of the difference in pixel values between two image pixels.
+// TODO: Currently ~80% of cycle time is spent in this function, optimize.
 int pixel_dif_abs(int x_1, int y_1, int x_2, int y_2, struct ppm_array *img_left, struct ppm_array *img_right)
 {
     // Return -1 if out of bounds, so that we can process out of bounds differently
     if (x_1 < 0 || x_2 < 0 || y_1 < 0 || y_2 < 0 ||
         x_1 >= img_left->width || x_2 >= img_right->width || y_1 >= img_right->width || y_2 >= img_right->height)
     {
-        // printf("OOB: x1 %d y1 %d x2 %d y2 %d 1c %d 1r %d 2c %d 2r %d\n",x_1,y_1,x_2,y_2,image_1.cols,image_1.rows,image_2.cols,image_2.rows);
         return -1;
     }
     int dif = 0;
@@ -468,6 +482,8 @@ int pixel_dif_abs(int x_1, int y_1, int x_2, int y_2, struct ppm_array *img_left
     return dif;
 }
 
+// Get the sum absolute difference between kernels in 2 images. 
+// TODO: Currently ~20% of cycle time is spent in this function, optimize.
 double get_sum_absolute_difference(int x_1, int y_1, int x_2, int y_2, struct ppm_array *img_left, struct ppm_array *img_right)
 {
     // Sum of squared differences
@@ -486,16 +502,21 @@ double get_sum_absolute_difference(int x_1, int y_1, int x_2, int y_2, struct pp
         }
     }
 
-    // Divide by the number of valid pixels, to get average match
+    // Divide by the number of valid pixels, to get average match. This solves 
+    // edge cases when pixels don't exist (such as on the edge of an image).
     SAD = SAD / (double)pixels;
     return SAD;
 }
 
+// Calculate a parabolic approximation, allows us to provide sub-pixel accuracy 
+// in the disparity map.
+// Source: http://mccormickml.com/2014/01/10/stereo-vision-tutorial-part-i/
 double parabolic_approximation(double C_1, double C_2, double C_3, double d_2)
 {
     return d_2 - ((C_3 - C_1) / (C_1 - 2 * C_2 + C_3)) / 2;
 }
 
+// Calculate the disparity for a given pixel.
 double get_disparity(struct ppm_array *img_left, struct ppm_array *img_right, int x, int y, int search_len, int offset)
 {
     double min_SAD = DBL_MAX;
@@ -504,19 +525,16 @@ double get_disparity(struct ppm_array *img_left, struct ppm_array *img_right, in
     double *disparity_map = calloc(search_len + 1, sizeof(double));
     for (int i = 0; -i <= search_len && i + x + KERNEL_EDGE_SIZE - offset > 0; i--)
     {
-        // printf("i:%d x:%d KERNEL_EDGE_SIZE:%d img_left->width:%d\n",i,x,KERNEL_EDGE_SIZE,img_left->width);
         double new_SAD = get_sum_absolute_difference(x, y, x + i - offset, y, img_left, img_right);
         if (new_SAD < min_SAD)
         {
             min_SAD = new_SAD;
             disparity = -i + offset;
         }
-        // printf("i:%d\n cont:%s",-i,-i <= BLOCK_SIZE ? "yes" : "no");
         disparity_map[-i] = new_SAD;
     }
 
     // Sub-pixel approximation
-    // http://mccormickml.com/2014/01/10/stereo-vision-tutorial-part-i/
     if (disparity > 0 && disparity < search_len)
     {
         return parabolic_approximation(disparity_map[disparity - 1 - offset], disparity_map[disparity - offset], disparity_map[disparity + 1 - offset], disparity + offset);
@@ -524,6 +542,7 @@ double get_disparity(struct ppm_array *img_left, struct ppm_array *img_right, in
     return disparity;
 }
 
+// Perform block matching to generate a disparity map
 void block_match(struct ppm_array *img_left, struct ppm_array *img_right, struct disparity_map *img_out, int search_len)
 {
     for (int j = 0; j < img_out->height; j++)
@@ -533,11 +552,21 @@ void block_match(struct ppm_array *img_left, struct ppm_array *img_right, struct
 
             img_out->arr[i][j] = get_disparity(img_left, img_right, i, j, search_len, 0);
         }
-        printf("\r%d/%d - %2.0f%%", j, img_out->height, 100 * (double)j / (double)img_out->height);
-        fflush(stdout);
+        // DEBUG
+        // printf("\r%d/%d - %2.0f%%", j, img_out->height, 100 * (double)j / (double)img_out->height);
+        // fflush(stdout);
     }
-    printf("\n");
+    // printf("\n");
 }
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+//                        BEGIN WIP SECTION
+// 
+// Within this section I am working on a new approach to block matching that is 
+// not yet functional. Comments are sparse and code is incorrect. Read at your 
+// own risk.
+//
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 
 void block_match_informed(struct ppm_array *img_left, struct ppm_array *img_right, struct disparity_map *coarse, struct disparity_map *img_out, int search_len)
 {
@@ -548,13 +577,14 @@ void block_match_informed(struct ppm_array *img_left, struct ppm_array *img_righ
             int coarse_x = coarse->arr[i / 2][j / 2];
             img_out->arr[i][j] = get_disparity(img_left, img_right, i, j, search_len + 4, coarse_x - 1);
         }
-        printf("\r%d/%d - %2.0f%%", j, img_out->height, 100 * (double)j / (double)img_out->height);
-        fflush(stdout);
+        // DEBUG
+        // printf("\r%d/%d - %2.0f%%", j, img_out->height, 100 * (double)j / (double)img_out->height);
+        // fflush(stdout);
     }
-    printf("\n");
+    // printf("\n");
 }
 
-struct PPMPixel get_gausian_3(struct ppm_array *img_in, int x, int y)
+struct ppm_pixel get_gausian_3(struct ppm_array *img_in, int x, int y)
 {
     double kernel[3][3] = {{0.01, 0.08, 0.01},
                            {0.08, 0.64, 0.08},
@@ -572,7 +602,7 @@ struct PPMPixel get_gausian_3(struct ppm_array *img_in, int x, int y)
             green += kernel[i + 1][j + 1] * (double)img_in->arr[x + i][y + j]->green;
         }
     }
-    struct PPMPixel pix;
+    struct ppm_pixel pix;
     pix.red = (int)red;
     pix.green = (int)green;
     pix.blue = (int)blue;
@@ -585,7 +615,7 @@ void blur_gausian(struct ppm_array *img_in, struct ppm_array *img_out)
     {
         for (int i = 0; i < img_out->width; i++)
         {
-            struct PPMPixel pix = get_gausian_3(img_in, i, j);
+            struct ppm_pixel pix = get_gausian_3(img_in, i, j);
             img_out->arr[i][j]->red = pix.red;
             img_out->arr[i][j]->green = pix.green;
             img_out->arr[i][j]->blue = pix.blue;
@@ -593,7 +623,7 @@ void blur_gausian(struct ppm_array *img_in, struct ppm_array *img_out)
     }
 }
 
-struct PPMPixel get_pix_avg(struct ppm_array *img_in, int x_1, int y_1, int x_2, int y_2)
+struct ppm_pixel get_pix_avg(struct ppm_array *img_in, int x_1, int y_1, int x_2, int y_2)
 {
     double red = 0;
     double green = 0;
@@ -612,7 +642,7 @@ struct PPMPixel get_pix_avg(struct ppm_array *img_in, int x_1, int y_1, int x_2,
     red /= num_pix;
     green /= num_pix;
     blue /= num_pix;
-    struct PPMPixel pix;
+    struct ppm_pixel pix;
     pix.red = (int)red;
     pix.green = (int)green;
     pix.blue = (int)blue;
@@ -636,7 +666,7 @@ void resize_down_half(struct ppm_array *img_in, struct ppm_array *img_out)
     {
         for (int i = 0; i < img_out->width; i++)
         {
-            struct PPMPixel pix = get_pix_avg(&blurred, i * 2, j * 2, (i * 2) + 1, (j * 2) + 1);
+            struct ppm_pixel pix = get_pix_avg(&blurred, i * 2, j * 2, (i * 2) + 1, (j * 2) + 1);
             img_out->arr[i][j]->red = pix.red;
             img_out->arr[i][j]->green = pix.green;
             img_out->arr[i][j]->blue = pix.blue;
@@ -662,14 +692,19 @@ void pyramid_block_match(struct ppm_array *img_left, struct ppm_array *img_right
     block_match_informed(img_left, img_right, &disparity_map_coarse, disparity_map, 2);
 }
 
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+//                        END WIP SECTION
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
 int main()
 {
-    // Load an image
-    struct PPMImage *temp;
+    struct ppm_image *temp;
     struct ppm_array img_1;
     struct ppm_array img_2;
     struct disparity_map img_3;
     clock_t t;
+
+    // Load images
     temp = readPPM("tsukuba/scene1.row3.col1.ppm");
     img_to_arr(temp, &img_1);
     free(temp->data);
@@ -677,27 +712,22 @@ int main()
     temp = readPPM("tsukuba/scene1.row3.col2.ppm");
     img_to_arr(temp, &img_2);
 
+    // Allocate correct size for disparity map
     img_3.height = img_1.height;
     img_3.width = img_1.width;
     allocate_disparity_map(&img_3);
 
-    // print_arr(img);
-
-    // to_greyscale(&img_1);
-    // to_greyscale(&img_2);
-
+    // Execute block match and time result
     t = clock();
-    // resize_down_half(&img_1, &img_3);
-    // blur_gausian(&img_1,&img_3);
     block_match(&img_1, &img_2, &img_3, 20);
-    // pyramid_block_match(&img_1, &img_2, &img_3);
     t = clock() - t;
     printf("block_match() took %f seconds to execute \n", ((double)t) / CLOCKS_PER_SEC);
 
     // Export the processed image
-    // arr_to_img(&img_3, temp);
     disparity_map_to_img(&img_3, temp);
     writePPM("processed.ppm", temp);
+
+    // Free data structures
     free(temp->data);
     free(temp);
     free_ppm_array(&img_1);
