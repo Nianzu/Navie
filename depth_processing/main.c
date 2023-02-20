@@ -1,4 +1,4 @@
-// Nico Zucca, 12/2022
+// Nico Zucca, 1/2023
 
 // Compile cmd:
 // gcc -g main.c -o main.o
