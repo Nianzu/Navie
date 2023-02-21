@@ -14,7 +14,7 @@
 // Width of the window
 #define WINDOW_HEIGHT 1000
 // Number of particles to compute. Default 5000
-#define NUM_PARTICLES 5000
+#define NUM_PARTICLES 7000
 // Sensor offset for the side sensors in radians
 #define SENSOR_OFFSET 0.2
 
@@ -67,6 +67,14 @@ typedef struct double_suggestion
     double x_2;
     double y_2;
 } double_suggestion;
+
+// Internal structure used by resampling algorithm
+typedef struct index_value
+{
+    int index;
+    double value;
+    struct index_value *next;
+} index_value;
 
 // Draw a circle on the screen
 // Source: https://stackoverflow.com/questions/38334081/how-to-draw-circles-arcs-and-vector-graphics-in-sdl
@@ -284,6 +292,72 @@ double calc_weights(particle (*particles)[NUM_PARTICLES], SDL_Rect (*walls)[], a
 }
 
 // Resample the particles based on their weights, with some randomness.
+// TODO: Currently, this is taking 70% of the cycle time, mostly due to the cumulative weight loop.
+// void resample_particles_old(particle (*particles)[NUM_PARTICLES])
+// {
+//     double rate_angular;
+//     double rate_linear;
+//     double random_offset;
+//     double avg_particle_weight;
+//     int j;
+//     particle resampled_particles[NUM_PARTICLES];
+
+//     // Random offset
+//     random_offset = (double)rand() / (double)RAND_MAX;
+
+//     // Randomness spread values for linear and angular values
+//     rate_angular = 0.01; // Radians
+//     rate_linear = 0.5;
+
+//     // The average particle weight (note that they all sum to 1)
+//     avg_particle_weight = 1.0 / (double)NUM_PARTICLES;
+
+//     j = 0;
+//     for (int i = 0; i < NUM_PARTICLES; i++)
+//     {
+//         // "Scatter" value. Some percentage of values should be completely
+//         // random to allow for incorrect assumptions to be corrected.
+//         if ((double)rand() / (double)RAND_MAX < 0.99)
+//         {
+//             // This section is rather complicated and hard to explain, but it
+//             // randomly selects values proportionally to their weight, while
+//             // also guaranteeing an even spread of values between various
+//             // indexes (No cluster degeneracy).
+//             double cumulative_weight = 0.0;
+//             double u = random_offset + (double)i * avg_particle_weight;
+//             while (u > cumulative_weight)
+//             {
+//                 cumulative_weight += (*particles)[j].weight;
+//                 j++;
+//                 if (j >= NUM_PARTICLES)
+//                 {
+//                     j = 0;
+//                 }
+//             }
+//             if (j == 0)
+//             {
+//                 j = NUM_PARTICLES - 1;
+//             }
+//             else
+//             {
+//                 j--;
+//             }
+//             resampled_particles[i].x = (*particles)[j].x + rate_linear * (2 * ((double)rand() / (double)RAND_MAX) - 1);
+//             resampled_particles[i].y = (*particles)[j].y + rate_linear * (2 * ((double)rand() / (double)RAND_MAX) - 1);
+//             resampled_particles[i].angle = (*particles)[j].angle + rate_angular * (2 * ((double)rand() / (double)RAND_MAX) - 1);
+//         }
+//         else
+//         {
+//             // Random in range
+//             resampled_particles[i].x = rand_in_range(10, 990);
+//             resampled_particles[i].y = rand_in_range(10, 990);
+//             resampled_particles[i].angle = rand_in_range(0, 2 * M_PI);
+//         }
+//     }
+//     // Replace all particles with new resampled ones
+//     memcpy(particles, resampled_particles, sizeof(resampled_particles));
+// }
+
 void resample_particles(particle (*particles)[NUM_PARTICLES])
 {
     double rate_angular;
@@ -292,9 +366,9 @@ void resample_particles(particle (*particles)[NUM_PARTICLES])
     double avg_particle_weight;
     int j;
     particle resampled_particles[NUM_PARTICLES];
-
-    // Random offset
-    random_offset = (double)rand() / (double)RAND_MAX;
+    int particle_indexes[NUM_PARTICLES];
+    struct index_value *remaining_indexes = malloc(sizeof(index_value));
+    struct index_value *remaining_indexes_first = remaining_indexes;
 
     // Randomness spread values for linear and angular values
     rate_angular = 0.05; // Radians
@@ -303,39 +377,94 @@ void resample_particles(particle (*particles)[NUM_PARTICLES])
     // The average particle weight (note that they all sum to 1)
     avg_particle_weight = 1.0 / (double)NUM_PARTICLES;
 
+    // Random offset
+    random_offset = avg_particle_weight *((double)rand() / (double)RAND_MAX);
+
+    // Init the index_value ring
+    remaining_indexes->index = 0;
+    remaining_indexes->value = random_offset;
+    remaining_indexes->next = NULL;
+    for (int i = 1; i < NUM_PARTICLES; i++)
+    {
+        remaining_indexes->next = malloc(sizeof(index_value));
+        remaining_indexes = remaining_indexes->next;
+        // Set the index this is targeting
+        remaining_indexes->index = i;
+        // Set the necessary target value
+        remaining_indexes->value = random_offset + (double)i * avg_particle_weight;
+    }
+    // Point the last value to the first one so we have a ring
+    remaining_indexes->next = remaining_indexes_first;
+
+    // Loop through remaining indexes, incrementing the value until it is
+    // greater than the value on a given index. When it is, we remove that
+    // index and save its index value as the current iteration.
+    double cumulative_weight = 0.0;
+    int i = 0;
+    int done = 0;
+    while (1)
+    {
+        // Increase the weight
+        cumulative_weight += (*particles)[i].weight;
+
+        // Check every particle to see if its less than the weight
+        // printf("%d %d %d\n",remaining_indexes->next->index, remaining_indexes->next->next->index,remaining_indexes->next->next->next->index);
+        do
+        {
+            // printf("%f %f\n",cumulative_weight,remaining_indexes->next->value);
+            if (cumulative_weight >= remaining_indexes->next->value)
+            {
+                // Update the index map
+                particle_indexes[remaining_indexes->next->index] = i;
+
+                if (remaining_indexes->next->index == remaining_indexes->next->next->index)
+                {
+                    // printf("Here\n");
+                    // End case, there are no more to check
+                    free(remaining_indexes);
+                    done = 1;
+                    break;
+                }
+                else
+                {
+
+                    // Remove the index from the ring
+                    struct index_value *temp = remaining_indexes->next->next;
+                    free(remaining_indexes->next);
+                    remaining_indexes->next = temp;
+        // printf("::%d %d %d\n",remaining_indexes->next->index, remaining_indexes->next->next->index,remaining_indexes->next->next->next->index);
+                    // printf("removed\n");
+                }
+            }
+            remaining_indexes = remaining_indexes->next;
+        }
+        while (remaining_indexes->next->index < remaining_indexes->next->next->index);
+
+        // printf("::%d %f\n",i,cumulative_weight);
+        if (done)
+        {
+            break;
+        }
+        i++;
+        if (i >= NUM_PARTICLES)
+        {
+            i = 0;
+        }
+    }
+    
+        // printf("DONE\n");
+
     j = 0;
     for (int i = 0; i < NUM_PARTICLES; i++)
     {
         // "Scatter" value. Some percentage of values should be completely
         // random to allow for incorrect assumptions to be corrected.
-        if ((double)rand() / (double)RAND_MAX < 0.99)
+        // TODO the rand function is slow
+        if ((double)rand() / (double)RAND_MAX < 0.95)
         {
-            // This section is rather complicated and hard to explain, but it
-            // randomly selects values proportionally to their weight, while
-            // also guaranteeing an even spread of values between various
-            // indexes (No cluster degeneracy).
-            double cumulative_weight = 0.0;
-            double u = random_offset + (double)i * avg_particle_weight;
-            while (u > cumulative_weight)
-            {
-                cumulative_weight += (*particles)[j].weight;
-                j++;
-                if (j >= NUM_PARTICLES)
-                {
-                    j = 0;
-                }
-            }
-            if (j == 0)
-            {
-                j = NUM_PARTICLES - 1;
-            }
-            else
-            {
-                j--;
-            }
-            resampled_particles[i].x = (*particles)[j].x + rate_linear * (2 * ((double)rand() / (double)RAND_MAX) - 1);
-            resampled_particles[i].y = (*particles)[j].y + rate_linear * (2 * ((double)rand() / (double)RAND_MAX) - 1);
-            resampled_particles[i].angle = (*particles)[j].angle + rate_angular * (2 * ((double)rand() / (double)RAND_MAX) - 1);
+            resampled_particles[i].x = (*particles)[particle_indexes[i]].x + rate_linear * (2 * ((double)rand() / (double)RAND_MAX) - 1);
+            resampled_particles[i].y = (*particles)[particle_indexes[i]].y + rate_linear * (2 * ((double)rand() / (double)RAND_MAX) - 1);
+            resampled_particles[i].angle = (*particles)[particle_indexes[i]].angle + rate_angular * (2 * ((double)rand() / (double)RAND_MAX) - 1);
         }
         else
         {
@@ -380,6 +509,69 @@ void path_refactor(SDL_Rect (*walls)[], struct connection *path)
     }
 }
 
+// struct movement auto_navigation(struct connection *path, agent robot)
+struct movement auto_navigation(struct connection *path, particle robot)
+{
+    struct movement new_movement;
+    double linear_deadzone = 5;
+    double angular_deadzone = 0.3;
+    double dx = path->x_2 - path->x_1;
+    double dy = path->y_2 - path->y_1;
+    double angle;
+
+    // Compute the angle of the path
+    if (dx == 0)
+    {
+        if (dy >= 0)
+        {
+            // π/2
+            angle = M_PI_2;
+        }
+        else
+        {
+            // -π/2
+            angle = -M_PI_2;
+        }
+    }
+    else
+    {
+        angle = atan2f(dy, dx);
+    }
+    // Move angle to between 0 and 2π
+    if (angle < 0.0)
+    {
+        angle += 2 * M_PI;
+    }
+
+    // If at destination, stop
+    if (path->next == NULL && fabs(robot.x - path->x_2) < linear_deadzone && fabs(robot.y - path->y_2) < linear_deadzone)
+    {
+        new_movement.linear = 0;
+        new_movement.angular = 0;
+    }
+    // Otherwise if not facing correctly, turn towards path.
+    else if (fabs(angle - robot.angle) > angular_deadzone)
+    {
+        new_movement.linear = 0;
+        if (angle - robot.angle > 0)
+        {
+            new_movement.angular = angular_deadzone/2;
+        }
+        else
+        {
+
+            new_movement.angular = -angular_deadzone/2;
+        }
+    }
+    // Otherwise, drive forward
+    else
+    {
+        new_movement.linear = 5;
+        new_movement.angular = 0;
+    }
+    return new_movement;
+}
+
 int main(int argc, char *argv[])
 {
     struct agent robot;
@@ -389,11 +581,12 @@ int main(int argc, char *argv[])
     double max_weight;
     SDL_Event event;
     int close;
+    int auto_drive;
     int resample;
     particle particles[NUM_PARTICLES];
 
     // Seed rand with current time for more random values
-    srand ( time(NULL) );
+    srand(time(NULL));
 
     // Set the walls
     SDL_Rect walls[] = {
@@ -442,16 +635,22 @@ int main(int argc, char *argv[])
     robot.x = rand_in_range(10, 990);
     robot.y = rand_in_range(10, 990);
     robot.angle = rand_in_range(0, 2 * M_PI);
-    
+
     // Set the paths inital coordinates
     connection path = {0, 0, 0, 500, 500, NULL};
 
     // Loop control
     close = 0;
-    
+
     // Resample control
     resample = 1;
-    
+
+    // Auto drive control
+    auto_drive = 1;
+
+    // Index of the best particle
+    int best = 0;
+
     // Used for drawing the particle colors
     max_weight = 0;
 
@@ -459,7 +658,7 @@ int main(int argc, char *argv[])
     t = clock();
     while (!close)
     {
-        // Move the end of the path to the first node so we can recalculate the 
+        // Move the end of the path to the first node so we can recalculate the
         // path every frame
         struct connection *current_connection = &path;
         while (current_connection->next != NULL)
@@ -483,7 +682,7 @@ int main(int argc, char *argv[])
                 close = 1;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                // Toggle resampleing 
+                // Toggle resampleing
                 // if (resample)
                 // {
                 //     resample--;
@@ -501,7 +700,7 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Process user input. This is done outside of the event handler to 
+        // Process user input. This is done outside of the event handler to
         // correctly process holding down movement keys.
         if (keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP])
         {
@@ -542,6 +741,25 @@ int main(int argc, char *argv[])
             movement_estimate.angular += speed_angular;
         }
 
+        // calculations for pathfinding
+        path.x_1 = particles[best].x;
+        path.y_1 = particles[best].y;
+        // path_refactor(&walls, &path);
+
+        // Process auto navigation
+        if (auto_drive)
+        {
+            struct movement new_movement = auto_navigation(&path, particles[best]);
+            // struct movement new_movement = auto_navigation(&path, robot);
+
+            robot.angle = fmod(robot.angle + new_movement.angular, 2 * M_PI);
+            robot.x += new_movement.linear * cosf(robot.angle);
+            robot.y += new_movement.linear * sinf(robot.angle);
+
+            movement_estimate.angular += new_movement.angular;
+            movement_estimate.linear += new_movement.linear;
+        }
+
         // Calculate the lengths of the agent sensors
         robot.length_c = get_ray_len(&walls, robot.x, robot.y, robot.angle);
         robot.length_r = get_ray_len(&walls, robot.x, robot.y, robot.angle + SENSOR_OFFSET);
@@ -553,7 +771,7 @@ int main(int argc, char *argv[])
 
         // find the best-guess particle for drawing
         double weight = 0;
-        int best = 0;
+        best = 0;
         for (int i = 0; i < NUM_PARTICLES; i++)
         {
             if (particles[i].weight > weight)
@@ -563,17 +781,12 @@ int main(int argc, char *argv[])
             }
         }
 
-        // calculations for pathfinding
-        path.x_1 = robot.x;
-        path.y_1 = robot.y;
-        path_refactor(&walls, &path);
-
         // Stop clock (we don't want to count draw times)
         t = clock() - t;
 
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //                       BEGIN GRAPHICS
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
         // Process the screen
         SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
@@ -617,10 +830,9 @@ int main(int argc, char *argv[])
 
         SDL_RenderPresent(rend);
 
-        
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
         //                       END GRAPHICS
-        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
         printf("\rprocessing (not including graphics) took %f seconds to execute", ((double)t) / CLOCKS_PER_SEC);
         fflush(stdout);
@@ -628,7 +840,7 @@ int main(int argc, char *argv[])
         // Start new clock
         t = clock();
 
-        // Resample particles (this is done after graphics so that weight 
+        // Resample particles (this is done after graphics so that weight
         // displays are correct for graphics)
         if (resample)
         {
