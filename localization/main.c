@@ -2,9 +2,9 @@
 
 // Compile cmd:
 // export LD_LIBRARY_PATH="/usr/local/lib"
-// gcc main.c -o main.o `sdl2-config --cflags --libs` -lSDL2_image -lm -O3
+// gcc main.c -o main.o `sdl2-config --cflags --libs` -lm -O3
 
-#include <SDL2/SDL_image.h>
+#include <SDL2/SDL.h>
 #include <math.h>
 #include <limits.h>
 #include <time.h>

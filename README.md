@@ -37,8 +37,12 @@ The path planning implementation is designed to take a single path with x_1,y_1 
 
 You might notice that the green circle/line (the best guess robot) is not correct at first. This is because the map is highly symmetric, so there are lots of valid positions at first
 
-### Hardware
-Currently being researched. With the intent to run both the stereo image depth processing AND the navigation code onboard, I'm not sure what tech stack will be required. After the stereo image processing code has been written in C, I plan to benchmark it on Raspberry Pi 3, 4, and Picos to determine the feasibility.
+## Hardware
+### Processor - Raspberry Pi 4B
+Ideally, this will eventualy be a fully custom processor. However, I've been able to benchmark the processing on a Raspberry Pi 4B and it looks like this will be able to run under a second for a full cycle **without any additional optomizations**. Seeing as 1 second was my initial target when I started this project, this is good enough for now. 
+
+### Cameras - OV5647 x2
+
 
 ## Getting Started
 TODO write this section
@@ -55,6 +59,10 @@ git checkout 3.4
 
 sudo cmake -DOPENCV_EXTRA_MODULES_PATH=/mnt/c/Users/Zico/Desktop/opencv_contrib/modules -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D BUILD_EXAMPLES=ON -D WITH_QT=ON -D WITH_OPENGL=ON ..
 
+ RASPBERRY PI
+ ```
+ sudo apt install libsdl2-dev
+ ```
 ### Compile
 
 #### Depth processing
@@ -64,7 +72,7 @@ gcc -g main.c -o main.o
 
 #### Localization
 ```
-gcc main.c -O3 -o main.o `sdl2-config --cflags --libs` -lm
+gcc main.c -o main.o `sdl2-config --cflags --libs` -lm -O3
 ```
 
 ## To-Do
@@ -153,7 +161,21 @@ processing (not including graphics) took 0.027040 seconds to execute.
 ```
 Execution time is ~0.015s per frame, including path planning and particle filtering with 5000 particles.
 
+## Hardware benchmarks
 
+### Raspberry Pi 3 B V1.2
+#### Localization
+Software Version: 2d94655dcabb89866f78500f899f6fc5ea158938
+```
+processing (not including graphics) took 0.522824 seconds to execute
+```
+
+### Raspberry Pi 3 B V1.2
+#### Localization
+Software Version: 2d94655dcabb89866f78500f899f6fc5ea158938
+```
+processing (not including graphics) took 0.190935 seconds to execute
+```
 
 ## Sources
 
