@@ -1,0 +1,184 @@
+# Source: https://github.com/Rickodesea/ValgrindSuppression/blob/master/linux_sdl_gl.sup
+
+{
+   opengl_memcpy_addr8
+   Memcheck:Addr8
+   fun:memcpy@GLIBC*
+   obj:/usr/lib/x86_64-linux-gnu/dri/*_dri.so
+   ...
+}
+
+{
+   opengl_memcpy_addr1
+   Memcheck:Addr1
+   fun:memcpy@GLIBC*
+   obj:/usr/lib/x86_64-linux-gnu/dri/*_dri.so
+   ...
+}
+
+{
+   opengl_memset_addr8
+   Memcheck:Addr8
+   fun:memset
+   obj:/usr/lib/x86_64-linux-gnu/dri/*_dri.so
+   ...
+}
+
+{
+   sdl_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:SDL_Init_REAL
+   ...
+}
+
+{
+   x11_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libX11.so.*
+   ...
+}
+
+{
+   sdl_leak_indirect
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   ...
+   fun:SDL_Init_REAL
+   ...
+}
+
+{
+   sdl_leak_definite
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   fun:SDL_Init_REAL
+   ...
+}
+
+# OpenGL Calls DL under the Hood - Taken straight out of Valgrind --gen-suppressions
+# Could overlap with non-graphics DL api calls
+# But, If you are not using DL directly, then don't worry about this
+{
+   dl_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:dlopen@@GLIBC*
+   ...
+}
+
+# Same as above but more generic
+# Could overlap with non-graphics DL api calls
+# But, If you are not using DL directly, then don't worry about this
+{
+   dl_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:_dl_*
+   ...
+}
+
+{
+   x11_leak_indirect
+   Memcheck:Leak
+   match-leak-kinds: indirect
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libX11.so.*
+   ...
+}
+
+{
+   x11_leak_definite
+   Memcheck:Leak
+   match-leak-kinds: definite
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libX11.so.*
+   ...
+}
+
+{
+   x11_leak_possible
+   Memcheck:Leak
+   match-leak-kinds: possible
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libX11.so.*
+   ...
+}
+
+{
+   opengl_leak_reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/libGLX.so.*
+   ...
+}
+
+{
+   LinuxDriLibraries_Addr2
+   Memcheck:Addr2
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/dri/iris_dri.so
+   ...
+}
+
+{
+   LinuxDriLibraries_Addr4
+   Memcheck:Addr4
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/dri/iris_dri.so
+   ...
+}
+
+{
+   LinuxDriLibraries_Addr8
+   Memcheck:Addr8
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/dri/iris_dri.so
+   ...
+}
+
+{
+   LinuxDriLibraries_Leak_Reachable
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   obj:/usr/lib/x86_64-linux-gnu/dri/iris_dri.so
+   ...
+}
+
+# SDL uses memory hacks where it passes pointers to local allocated data
+# Valgrind detect these as leaks because we do not free
+# One example is SDL_GetErrBuf
+{
+   SDL_MemHack_GetErrBuf
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:SDL_GetErrBuf
+   ...
+}
+
+{
+   Linux_Internal_Leak_malloc_libLLVM
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   obj:/usr/lib/x86_64-linux-gnu/libLLVM-10.so.1
+   ...
+}
+
+{
+   Linux_Internal_Leak__Znwm_libLLVM
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:_Znwm
+   obj:/usr/lib/x86_64-linux-gnu/libLLVM-10.so.1
+   ...
+}
