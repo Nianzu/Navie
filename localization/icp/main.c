@@ -11,6 +11,9 @@ int main(int argc, char *argv[])
     SDL_Event event;
     int close;
 
+    // Seed rand with current time for more random values
+    srand(time(NULL));
+
     struct point cloud_a_points[16] = {
         {20, 20},
         {30, 30},
@@ -31,11 +34,11 @@ int main(int argc, char *argv[])
         {170, 90},
     };
 
-    // int offset_x = rand_in_range(20, 500);
-    // int offset_y = rand_in_range(20, 500);
+    int offset_x = rand_in_range(20, 800);
+    int offset_y = rand_in_range(20, 800);
 
-    int offset_x = 200;
-    int offset_y = 0;
+    // int offset_x = 200;
+    // int offset_y = 0;
 
     // struct point cloud_b_points[16] = {
     //     {20 + offset, 20},
@@ -98,8 +101,7 @@ int main(int argc, char *argv[])
     cloud_init(cloud_a, cloud_a_points, sizeof(cloud_a_points) / sizeof(cloud_a_points[0]));
     cloud_init(cloud_b, cloud_b_points, sizeof(cloud_b_points) / sizeof(cloud_b_points[0]));
     cloud_init(cloud_c, cloud_b_points, sizeof(cloud_b_points) / sizeof(cloud_b_points[0]));
-    double rot = 0.1;
-    // double rot = rand_in_range(0, M_PI * 2);
+    double rot = rand_in_range(0, M_PI * 2);
     rotate_cloud(cloud_c, rot);
     rotate_cloud(cloud_b, rot);
 
@@ -123,7 +125,7 @@ int main(int argc, char *argv[])
     close = 0;
 
     // ICP control
-    int icp = 0;
+    int icp_enable = 0;
     double last_error = 0;
     while (!close)
     {
@@ -138,13 +140,13 @@ int main(int argc, char *argv[])
                 close = 1;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                icp = 1;
+                icp_enable = 1;
                 break;
             }
         }
 
         // Process ICP physics-based (no rotation)
-        if (icp)
+        if (icp_enable)
         {
             // transform t;
             // t.a = 0;
@@ -221,47 +223,11 @@ int main(int argc, char *argv[])
         }
 
         // Process ICP matrix-based
-        if (icp)
+        if (icp_enable)
         {
-            double covariance[4] = {0};
-            double u[4] = {0};
-            double sigma[4] = {0};
-            double v[4] = {0};
-            double rotation[4] = {0};
 
-            // double rotation[4] = {0};
-            // double rotation[4] = {-0.5625,0.8268, 0.8269, 0.5623};
-            // double rotation[4] = {0.82633298,-0.56318187, 0.56318187, 0.82633298};
-            // double rotation[4] = {0.3656523751389835, 0.9307515058381452, 0.9307515058381452, -0.3656523751389835};
-
-            //              0.82633298 -0.56318187]
-            //  [ 0.56318187  0.82633298
-            translate_cloud(cloud_c,cloud_a->com.x -cloud_c->com.x,cloud_a->com.y -cloud_c->com.y);
-            compute_covariance(cloud_c, cloud_a, &covariance);
-            printf("Input:\n");
-            print_2(&covariance);
-
-            svd_2(&covariance, &u, &sigma, &v);
-            printf("U:\n");
-            print_2(&u);
-            printf("Sigma:\n");
-            print_2(&sigma);
-            printf("V:\n");
-            print_2(&v);
-
-            copy_2(&rotation, &u);
-            // cross_product_2(&rotation, &sigma);
-            cross_product_2(&rotation, &v);
-            transpose_2(&rotation);
-            printf("Rotation:\n");
-            print_2(&rotation);
-            double det;
-            determinant_2(&rotation, &det);
-            printf("Det: %f\n", det);
-
-            rotate_cloud_matrix(cloud_c, &rotation);
-
-            icp = 0;
+            icp2(cloud_a, cloud_c);
+            icp_enable = 0;
         }
 
         // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *

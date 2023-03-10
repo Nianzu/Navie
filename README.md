@@ -120,6 +120,11 @@ gcc main.c -o main.o `sdl2-config --cflags --libs` -lm -O3
 
 ### Misc
 * Consider installing a laser pointer to aid in depth perception of featureless walls. (structured light)
+* move zipties back
+* Motor driver needs to be filed for fit (too tight)
+* Motor driver aleged ineficiencies
+* motor driver size
+* Wheel hub D shaft is not tight enough. Radius is good, increase length of D-line
 
 ## Benchmarks - Depth processing
 
@@ -259,6 +264,7 @@ https://towardsdatascience.com/optimization-techniques-simulated-annealing-d6a47
 https://resources.mpi-inf.mpg.de/deformableShapeMatching/EG2011_Tutorial/slides/2.1%20Rigid%20ICP.pdf
 https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix/
 https://www.youtube.com/watch?v=cOUTpqlX-Xs
+https://cs.fit.edu/~dmitra/SciComp/Resources/singular-value-decomposition-fast-track-tutorial.pdf
 
 ### Camera processing
 Background: https://www.raspberrypi.com/documentation/computers/camera_software.html#getting-started

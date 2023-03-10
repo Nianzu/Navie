@@ -185,7 +185,7 @@ void translate_cloud(cloud *c, double x, double y)
     for (int i = 0; i < c->num; i++)
     {
         c->points[i].x += x;
-        c->points[i].x += y;
+        c->points[i].y += y;
     }
     c->com.x += x;
     c->com.y += y;
@@ -218,7 +218,7 @@ double angle_between_points(point a, point b, point center)
 
 void determinant_2(double (*input)[4], double *out)
 {
-    (*out) = (*input)[0]* (*input)[3] - (*input)[1]* (*input)[2];
+    (*out) = (*input)[0] * (*input)[3] - (*input)[1] * (*input)[2];
 }
 
 // Get the covariance of c1 relative to c2
@@ -227,12 +227,12 @@ void compute_covariance(cloud *c1, cloud *c2, double (*covariance)[4])
 
     for (int i = 0; i < c1->num; i++)
     {
+        // printf("x:%f y:%f\n",c2->points[i].x,c2->com.x);
         (*covariance)[0] += (c1->points[i].x - c1->com.x) * (c2->points[i].x - c2->com.x);
         (*covariance)[1] += (c1->points[i].x - c1->com.x) * (c2->points[i].y - c2->com.y);
         (*covariance)[2] += (c1->points[i].y - c1->com.y) * (c2->points[i].x - c2->com.x);
         (*covariance)[3] += (c1->points[i].y - c1->com.y) * (c2->points[i].y - c2->com.y);
     }
-
     (*covariance)[0] /= c1->num;
     (*covariance)[1] /= c1->num;
     (*covariance)[2] /= c1->num;
@@ -254,7 +254,7 @@ void cross_product_2(double (*a)[4], double (*b)[4])
     temp[1] = (*a)[0] * (*b)[1] + (*a)[1] * (*b)[3];
     temp[2] = (*a)[2] * (*b)[0] + (*a)[3] * (*b)[2];
     temp[3] = (*a)[2] * (*b)[1] + (*a)[3] * (*b)[3];
-    copy_2(a,&temp);
+    copy_2(a, &temp);
 }
 
 void transpose_2(double (*a)[4])
@@ -264,7 +264,7 @@ void transpose_2(double (*a)[4])
     temp[1] = (*a)[2];
     temp[2] = (*a)[1];
     temp[3] = (*a)[3];
-    copy_2(a,&temp);
+    copy_2(a, &temp);
 }
 
 void svd_2(double (*input)[4], double (*u)[4], double (*sigma)[4], double (*v)[4])
@@ -314,13 +314,218 @@ void svd_2(double (*input)[4], double (*u)[4], double (*sigma)[4], double (*v)[4
     }
 
     double uT[4] = {0};
-    copy_2(&uT,u);
+    copy_2(&uT, u);
     transpose_2(&uT);
     cross_product_2(v, &uT);
     cross_product_2(v, input);
 }
 
+int eigenvalues_2(double (*input)[4], double (*e)[4])
+{
+
+    // a b
+    // c d
+    // det(A - LI) = (a-L)(d-L) - bc
+    // = L^2 - (a+d)L + ad-bc
+
+    // x = (-b +- sqrt(b^2 - 4ac))/2a
+
+    double a = 1;
+    double b = -(*input)[0] - (*input)[3];
+    double c = (*input)[0] * (*input)[3] - (*input)[1] * (*input)[2];
+    double discriminant = b * b - 4 * a * c;
+    (*e)[1] = (*e)[2] = 0;
+
+    // Real eigenvalues
+    if (discriminant >= 0)
+    {
+        (*e)[0] = (-b + sqrt(discriminant)) / (2 * a);
+        (*e)[3] = (-b - sqrt(discriminant)) / (2 * a);
+        return 1;
+    }
+    // Complex eigenvalues
+    else
+    {
+        printf("COMPLEX EIGENVALUES");
+        return 0;
+    }
+}
+
+void eigenvectors_2(double (*input)[4], double (*sigma)[4], double (*ev)[4])
+{
+    double a = (*input)[0], b = (*input)[1], c = (*input)[2], d = (*input)[3];
+    double lambda1 = (*sigma)[0], lambda2 = (*sigma)[3];
+    double v1_x1, v1_x2, v2_x1, v2_x2;
+    // [ a-L  b   ]
+    // [ c    d-L ]
+
+    // Compute for Lambda 1
+    if ((b == 0 && a - lambda1 != 0) || (d - lambda1 == 0 && c != 0))
+    {
+        (*ev)[0] = 0.0;
+    }
+    else
+    {
+        (*ev)[0] = 1.0;
+    }
+    if ((b != 0 && a - lambda1 == 0) || (d - lambda1 != 0 && c == 0))
+    {
+        (*ev)[2] = 0;
+    }
+    if ((*ev)[0] == 0)
+    {
+        (*ev)[2] = 1.0;
+    }
+    else
+    {
+        (*ev)[2] = (lambda1 - a) / b;
+    }
+
+    // Compute for lambda 2
+    if ((b == 0 && a - lambda2 != 0) || (d - lambda2 == 0 && c != 0))
+    {
+        (*ev)[1] = 0.0;
+    }
+    else
+    {
+        (*ev)[1] = 1.0;
+    }
+    if ((b != 0 && a - lambda2 == 0) || (d - lambda2 != 0 && c == 0))
+    {
+        (*ev)[3] = 0;
+    }
+    if ((*ev)[1] == 0)
+    {
+        (*ev)[3] = 1.0;
+    }
+    else
+    {
+        (*ev)[3] = (lambda2 - a) / b;
+    }
+}
+
+void eigenvectors_orthonormal_2(double (*input)[4], double (*sigma)[4], double (*ev)[4])
+{
+    eigenvectors_2(input, sigma, ev);
+    double h1 = sqrt((*ev)[0] * (*ev)[0] + (*ev)[2] * (*ev)[2]);
+    double h2 = sqrt((*ev)[1] * (*ev)[1] + (*ev)[3] * (*ev)[3]);
+    (*ev)[0] /= h1;
+    (*ev)[1] /= h2;
+    (*ev)[2] /= h1;
+    (*ev)[3] /= h2;
+}
+
+void inverse_2(double (*input)[4])
+{
+    double det;
+    determinant_2(input, &det);
+    double temp = (*input)[0];
+    (*input)[0] = (*input)[3];
+    (*input)[3] = temp;
+    (*input)[1] *= -1;
+    (*input)[2] *= -1;
+
+    (*input)[0] /= det;
+    (*input)[1] /= det;
+    (*input)[2] /= det;
+    (*input)[3] /= det;
+}
+
+void svd_2_new(double (*a)[4], double (*u)[4], double (*sigma)[4], double (*vt)[4])
+{
+    double at[4];
+    double ata[4];
+    double eigenvalues[4];
+    double eigenvectors[4];
+    double sigma_inv[4];
+    double v[4];
+
+    // Get AT * A
+    copy_2(&at, a);
+    transpose_2(&at);
+    copy_2(&ata, &at);
+    cross_product_2(&ata, a);
+
+    // Get eigenvalues (sigma matrix)
+    eigenvalues_2(&ata, &eigenvalues);
+    (*sigma)[0] = sqrt(eigenvalues[0]);
+    (*sigma)[1] = 0;
+    (*sigma)[2] = 0;
+    (*sigma)[3] = sqrt(eigenvalues[3]);
+
+    // Get eigenvectors
+    eigenvectors_orthonormal_2(&ata, &eigenvalues, &v);
+    copy_2(vt, &v);
+    transpose_2(vt);
+
+    // Get U vector
+    copy_2(&sigma_inv, sigma);
+    inverse_2(&sigma_inv);
+    copy_2(u, a);
+    cross_product_2(u, &v);
+    cross_product_2(u, &sigma_inv);
+}
+
 void print_2(double (*input)[4])
 {
     printf("[ %3f %3f ]\n[ %3f %3f ]\n", (*input)[0], (*input)[1], (*input)[2], (*input)[3]);
+}
+
+void icp(cloud *cloud_a, cloud *cloud_c)
+{
+    double covariance[4] = {0};
+    double u[4] = {0};
+    double sigma[4] = {0};
+    double v[4] = {0};
+    double rotation[4] = {0};
+    double covariance_check[4] = {0};
+
+    translate_cloud(cloud_c, cloud_a->com.x - cloud_c->com.x, cloud_a->com.y - cloud_c->com.y);
+    compute_covariance(cloud_c, cloud_a, &covariance);
+
+    svd_2_new(&covariance, &u, &sigma, &v);
+
+    copy_2(&rotation, &u);
+    cross_product_2(&rotation, &v);
+    transpose_2(&rotation);
+    rotate_cloud_matrix(cloud_c, &rotation);
+}
+
+void icp2(cloud *cloud_a, cloud *cloud_b)
+{
+    double covariance[4] = {0};
+    double u[4] = {0};
+    double sigma[4] = {0};
+    double v[4] = {0};
+    double rotation[4] = {0};
+    double covariance_check[4] = {0};
+    cloud cloud_c;
+    cloud_c.points = malloc(sizeof(point)*cloud_b->num);
+    
+    translate_cloud(cloud_b, cloud_a->com.x - cloud_b->com.x, cloud_a->com.y - cloud_b->com.y);
+
+    cloud_c.com.x = 0;
+    cloud_c.com.y = 0;
+    cloud_c.num = cloud_b->num;
+    for (int i = 0; i < cloud_b->num; i++)
+    {
+        point p = closest_point(cloud_a,cloud_b->points[i]);
+        cloud_c.com.x += p.x;
+        cloud_c.com.y += p.y;
+        cloud_c.points[i].x = p.x;
+        cloud_c.points[i].y = p.y;
+    }
+    cloud_c.com.x /= cloud_c.num;
+    cloud_c.com.y /= cloud_c.num;
+    // printf("x:%f y:%f\n", cloud_a->com.x - cloud_b->com.x, cloud_a->com.y - cloud_b->com.y);
+    compute_covariance(cloud_b, &cloud_c, &covariance);
+    print_2(&covariance);
+
+    svd_2_new(&covariance, &u, &sigma, &v);
+
+    copy_2(&rotation, &u);
+    cross_product_2(&rotation, &v);
+    transpose_2(&rotation);
+    print_2(&rotation);
+    // rotate_cloud_matrix(cloud_b, &rotation);
 }
