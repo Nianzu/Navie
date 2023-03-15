@@ -39,33 +39,43 @@ You might notice that the green circle/line (the best guess robot) is not correc
 
 ## Hardware
 ### Processor - Raspberry Pi 4B AND  Raspberry Pi 3 B V1.2
-Ideally, this will eventualy be a fully custom processor. However, I've been able to benchmark the processing on a Raspberry Pi 4B and it looks like this will be able to run under a second for a full cycle **without any additional optomizations**. Seeing as 1 second was my initial target when I started this project, this is good enough for now. However, due to my choice of camera, I'll have to run 2 pies. The cameras plug into the pi's camera port, and I don't want to pay for a camera multiplexer. So, the plan is for the Pi 4 to transfer the image to the Pi 3, which will run the depth processing. Then the Pi 3 will output sensor vectors to the Pi 4 which will run the particle filter and the motors.
+Ideally, this will eventually be a fully custom processor. However, I've been able to benchmark the processing on a Raspberry Pi 4B and it looks like this will be able to run under a second for a full cycle **without any additional optimizations**. Seeing as 1 second was my initial target when I started this project, this is good enough for now. However, due to my choice of camera, I'll have to run 2 pies. The cameras plug into the pi's camera port, and I don't want to pay for a camera multiplexer. So, the plan is for the Pi 4 to transfer the image to the Pi 3, which will run the depth processing. Then the Pi 3 will output sensor vectors to the Pi 4 which will run the particle filter and the motors.
 
 ### Cameras - OV5647 x2
-Why these cameras? 1: They are cheap. I managed to find a set of 2 of these on amazon for $9. 2: They are high performing, promising 2592 x 1944 still images, 1080p video, and up to 90 fps at 640x480. What more do I need?
-
-https://www.arducam.com/product/arducam-ov5647-standard-raspberry-pi-camera-b0033/
+Why these cameras? 1: They are cheap. I managed to find a set of 2 of these on amazon for $9. 2: They are high performing, promising 2592 x 1944 still images, 1080p video, and up to 90 fps at 640x480. TODO What more do I need?
 
 <image src="images/OV5647.jpg" width=200>
 
+
+[Arducam link](https://www.arducam.com/product/arducam-ov5647-standard-raspberry-pi-camera-b0033/)
+
+[Amazon link](https://www.amazon.com/gp/product/B07ZZ2K7WP/ref=ox_sc_act_title_3?smid=A20BQYJRA135IQ&psc=1)
+
+
 ### Motors - N20 knockoff
-What do I need in a motor? Encoder feedback, decent build quality, low size and weight. I wanted to get [these](https://www.servocity.com/90-rpm-micro-gear-motor-w-encoder/) from servo city, but I found what looks to be a knockoff on Amazon for half the price. We'll see if I get what I paid for.
+What do I need in a motor? Encoder feedback, decent build quality, low size and weight. I wanted to get [these](https://www.servocity.com/90-rpm-micro-gear-motor-w-encoder/) from servo city, but I found what looks to be a knockoff on Amazon for half the price. TODO We'll see if I get what I paid for.
 
 <image src="images/motor.jpg" width=200>
 
-https://www.amazon.com/Reduction-Multiple-Replacement-Velocity-Measurement/dp/B08DKJT2XF/ref=sr_1_3?content-id=amzn1.sym.9575273b-ecd8-4648-9bf0-15f20c657e0a&keywords=small+motor+with+encoder&pd_rd_r=fde32aa3-9d35-4a29-bff8-4399a2b25553&pd_rd_w=yEkkM&pd_rd_wg=WBrTI&pf_rd_p=9575273b-ecd8-4648-9bf0-15f20c657e0a&pf_rd_r=EPETC9GXXEZR4B1HBQQV&qid=1677183031&sr=8-3
+[Amazon link](https://www.amazon.com/Reduction-Multiple-Replacement-Velocity-Measurement/dp/B08DKJT2XF/ref=sr_1_3?content-id=amzn1.sym.9575273b-ecd8-4648-9bf0-15f20c657e0a&keywords=small+motor+with+encoder&pd_rd_r=fde32aa3-9d35-4a29-bff8-4399a2b25553&pd_rd_w=yEkkM&pd_rd_wg=WBrTI&pf_rd_p=9575273b-ecd8-4648-9bf0-15f20c657e0a&pf_rd_r=EPETC9GXXEZR4B1HBQQV&qid=1677183031&sr=8-3)
 
 ### Motor controler - L298N
 Cheap, reliable, and most importantly cheap.
 
 <image src="images/motor_driver.jpg" width=200>
 
-https://www.amazon.com/HiLetgo-Controller-Stepper-H-Bridge-Mega2560/dp/B07BK1QL5T/ref=pd_day0fbt_vft_none_img_sccl_2/131-7297339-1128516?pd_rd_w=9qlK7&content-id=amzn1.sym.b7c02f9a-a0f8-4f90-825b-ad0f80e296ea&pf_rd_p=b7c02f9a-a0f8-4f90-825b-ad0f80e296ea&pf_rd_r=4H824REAQJ3KVMSXNEC8&pd_rd_wg=C2CHh&pd_rd_r=84f53a42-2846-4393-ba03-d0bd92b40781&pd_rd_i=B07BK1QL5T&psc=1
+[Amazon link](https://www.amazon.com/HiLetgo-Controller-Stepper-H-Bridge-Mega2560/dp/B07BK1QL5T/ref=pd_day0fbt_vft_none_img_sccl_2/131-7297339-1128516?pd_rd_w=9qlK7&content-id=amzn1.sym.b7c02f9a-a0f8-4f90-825b-ad0f80e296ea&pf_rd_p=b7c02f9a-a0f8-4f90-825b-ad0f80e296ea&pf_rd_r=4H824REAQJ3KVMSXNEC8&pd_rd_wg=C2CHh&pd_rd_r=84f53a42-2846-4393-ba03-d0bd92b40781&pd_rd_i=B07BK1QL5T&psc=1)
+
 
 ### Power converter - LM2596
 ### Integration and cooling
-![](images/sketch_side_1.png)
-![](images/sketch_iso_1.png)
+
+<img src="images/sketch_side_1.png"  width="500 px">
+<img src="images/sketch_iso_1.png"  width="500 px">
+<img src="images/V1_transparent.png"  width="500 px">
+<img src="images/V1_iso.png"  width="500 px">
+<img src="images/V1_stack.png"  width="500 px">
+
 
 
 
@@ -76,22 +86,29 @@ https://banebots.com/banebots-wheel-2-3-8-x-0-4-1-2-hex-mount-50a-black-blue/
 TODO write this section
 
 ### Dev environment setup
-TODO fix this section
-* Ubuntu running under WSL with VcXsrv.
-* Installing OpenCV is a pain if there isn't already a binary for your system, but this script makes things pretty seamless. I did have to edit the dependencies to get it to work properly, but this is a good place to start.
-https://github.com/jayrambhia/Install-OpenCV
+* Ubuntu running under WSL with VcXsrv for test processes, 
+* Non-STL libraries
+    * Simple Direct Media Layer (SDL 2) `<SDL2/SDL.h>`. Used to write pixels to the screen. Used due to strong support, ease of use, and cross-platform support.
+    ```
+    sudo apt install libsdl2-dev
+    ```
+    * NCurses  `<ncurses.h>`. Used to get key inputs from the user to drive the robot in manual mode.
+    ```
+    sudo apt install libncurses5-dev libncursesw5-dev
+    ```
+    * Terminos  `<termios.h>`. Used to set the terminal to non-cannonical mode for easier driving. Seems to come pre-installed with linux, TODO need to check.
+    * bcm2835 `<bcm2835.h>`. Used to control the bcm2835 chip on the raspberry pi that handles GPIO. This is our GPIO library.
+    ```
+    wget http://www.airspayce.com/mikem/bcm2835/bcm2835-1.71.tar.gz
+    tar zxvf bcm2835-1.71.tar.gz
+    cd bcm2835-1.71
+    ./configure
+    make
+    sudo make check
+    sudo make install
+    ```
 
-git clone https://github.com/opencv/opencv_contrib.git
-cd opencv_contrib
-git checkout 3.4
 
-sudo cmake -DOPENCV_EXTRA_MODULES_PATH=/mnt/c/Users/Zico/Desktop/opencv_contrib/modules -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_TBB=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON -D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON -D BUILD_EXAMPLES=ON -D WITH_QT=ON -D WITH_OPENGL=ON ..
-
- RASPBERRY PI
- ```
- sudo apt install libsdl2-dev
- ```
- sudo apt install liblapacke-dev
 
 ### Compile
 
@@ -100,9 +117,19 @@ sudo cmake -DOPENCV_EXTRA_MODULES_PATH=/mnt/c/Users/Zico/Desktop/opencv_contrib/
 gcc -g main.c -o main.o
 ```
 
-#### Localization
+#### Localization (All subprograms)
 ```
 gcc main.c -o main.o `sdl2-config --cflags --libs` -lm -O3
+```
+
+#### Control
+```
+gcc -o main main.c -lm -lbcm2835
+```
+
+#### Test
+```
+gcc main.c -o main.o
 ```
 
 ## To-Do
@@ -118,13 +145,14 @@ gcc main.c -o main.o `sdl2-config --cflags --libs` -lm -O3
 * Path planner
 * Flood on loss of confidence
 
-### Misc
+### Mechanical
 * Consider installing a laser pointer to aid in depth perception of featureless walls. (structured light)
 * move zipties back
 * Motor driver needs to be filed for fit (too tight)
 * Motor driver aleged ineficiencies
 * motor driver size
 * Wheel hub D shaft is not tight enough. Radius is good, increase length of D-line
+* Camera cad is incorrect
 
 ## Benchmarks - Depth processing
 
@@ -214,13 +242,22 @@ processing (not including graphics) took 0.190935 seconds to execute
 
 
 ## Sources
+These are the sources that I used to inform my decision on this project, and that I think might be helpful to someone attempting something similar. I've made an effort to provide a general explanation of each source.
 
 ### Depth processing
-Background + source: https://medium.com/analytics-vidhya/distance-estimation-cf2f2fd709d8
+* *Stereo Vision: Depth Estimation between object and camera* - Apar Garg 
+    * Generalist beginner explanation of depth processing using block matching, and some of the math behind determining the depth of each pixel.
+    * Includes some source code in python
+    * https://medium.com/analytics-vidhya/distance-estimation-cf2f2fd709d8
 
-Dataset: https://vision.middlebury.edu/stereo/data/
+* *Middlebury Stereo Datasets*
+    * Great resource for image pairs to test depth processing. Ground truth images are sometimes included.
+    * https://vision.middlebury.edu/stereo/data/
 
-Background: https://towardsdatascience.com/depth-estimation-1-basics-and-intuition-86f2c9538cd1
+* *Depth Estimation: Basics and Intuition* - Daryl Tan
+    * Overview of the state of depth processing in CS, including stereo and monocular techniques.
+    * Great for understanding the options available for depth processing.
+    * https://towardsdatascience.com/depth-estimation-1-basics-and-intuition-86f2c9538cd1
 
 Background (Research paper): https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=32aedb3d4e52b879de9a7f28ee0ecee997003271
 
@@ -265,7 +302,11 @@ https://resources.mpi-inf.mpg.de/deformableShapeMatching/EG2011_Tutorial/slides/
 https://www.visiondummy.com/2014/04/geometric-interpretation-covariance-matrix/
 https://www.youtube.com/watch?v=cOUTpqlX-Xs
 https://cs.fit.edu/~dmitra/SciComp/Resources/singular-value-decomposition-fast-track-tutorial.pdf
-
+https://iosoft.blog/2020/07/16/raspberry-pi-smi/
+https://forums.raspberrypi.com/viewtopic.php?t=228727
+https://raspberrypi.stackexchange.com/questions/130529/how-fast-are-c-python-libraries
+https://forums.raspberrypi.com/viewtopic.php?t=244031
+PERIPHERAL BASE ADDRESS FOR RASPBERRY PI 4 is  0xFE000000
 ### Camera processing
 Background: https://www.raspberrypi.com/documentation/computers/camera_software.html#getting-started
 
@@ -275,6 +316,7 @@ Server Stream: libcamera-vid -t 0 --inline --listen -o tcp://0.0.0.0:8000
 Server Stream 60fps: libcamera-vid -t 0 --inline --listen -o tcp://0.0.0.0:8000 --level 4.2 --framerate 120 --width 1280 --height 720 --denoise cdn_off
 
 Client: ffplay tcp://10.0.0.73:8000 -vf "setpts=N/30" -fflags nobuffer -flags low_delay -framedrop
+ffplay tcp://10.0.0.73:8000 -vf "hflip,vflip" -flags low_delay -framedrop
 
 ## Contributions
 
