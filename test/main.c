@@ -1,4 +1,4 @@
-// gcc main.c -o main.o `sdl2-config --cflags --libs` -lm -O3
+// gcc main.c -o main.o
 
 #include <stdio.h>
 #include <stdlib.h>
