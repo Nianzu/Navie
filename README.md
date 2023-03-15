@@ -72,9 +72,9 @@ Cheap, reliable, and most importantly cheap.
 
 <img src="images/sketch_side_1.png"  width="500 px">
 <img src="images/sketch_iso_1.png"  width="500 px">
-<img src="images/V1_transparent.png"  width="500 px">
-<img src="images/V1_iso.png"  width="500 px">
-<img src="images/V1_stack.png"  width="500 px">
+<img src="images/V1_Transparent.png"  width="500 px">
+<img src="images/V1_Iso.png"  width="500 px">
+<img src="images/V1_Stack.png"  width="500 px">
 
 
 
