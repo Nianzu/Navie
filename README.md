@@ -307,6 +307,7 @@ https://forums.raspberrypi.com/viewtopic.php?t=228727
 https://raspberrypi.stackexchange.com/questions/130529/how-fast-are-c-python-libraries
 https://forums.raspberrypi.com/viewtopic.php?t=244031
 PERIPHERAL BASE ADDRESS FOR RASPBERRY PI 4 is  0xFE000000
+https://raspberrypi.stackexchange.com/questions/124985/using-motor-encoders-with-raspberry-pi
 ### Camera processing
 Background: https://www.raspberrypi.com/documentation/computers/camera_software.html#getting-started
 
