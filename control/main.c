@@ -1,4 +1,4 @@
-// g++ -o test main_2.c Realtime.cc -lm -lpigpio
+// g++ -o test main.c Realtime.cc -lm -lpigpio
 
 #include <pigpio.h>
 #include <stdio.h>
@@ -222,6 +222,16 @@ void drive_distance_in_time(double distance_meters, double total_time_seconds, b
     set_motor(right, stop, 0);
 }
 
+void turn_right()
+{
+    drive_distance_in_time(-0.043,2,true);
+}
+
+void turn_left()
+{
+    drive_distance_in_time(0.043,2,true);
+}
+
 int main(int argc, char **argv)
 {
     // Set the terminal to take inputs immediately, without waiting for [ENTER]
@@ -312,18 +322,33 @@ int main(int argc, char **argv)
         }
         else if (c == 'k')
         {
-            // Print some information
             drive_distance_in_time(0.4,10,false);
         }
         else if (c == 'm')
         {
-            // Print some information
             drive_distance_in_time(-0.4,10,false);
         }
         else if (c == 'l')
         {
-            // Print some information
-            drive_distance_in_time(-0.048,2,true);
+            turn_right();
+        }
+        else if (c == 'j')
+        {
+            turn_left();
+        }
+        else if (c == 'r')
+        {
+            drive_distance_in_time(0.2,5,false);
+            turn_left();
+            drive_distance_in_time(0.2,5,false);
+            turn_left();
+            drive_distance_in_time(0.2,5,false);
+	    turn_right();
+            drive_distance_in_time(0.6,12,false);
+	    turn_right();
+            drive_distance_in_time(0.4,8,false);
+	    turn_right();
+            drive_distance_in_time(0.2,5,false);
         }
         else if (c == 'e')
         {
